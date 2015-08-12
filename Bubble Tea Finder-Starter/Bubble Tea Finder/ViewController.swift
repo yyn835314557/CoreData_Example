@@ -10,6 +10,7 @@ import UIKit
 import CoreData
 
 class ViewController: UIViewController,FilterViewControllerDelegate {
+    
   
     func filterViewController(filter: FilterViewController, didSelectPredicate predicate: NSPredicate?, sortDescriptor: NSSortDescriptor?) {
         fetchRequest.predicate = nil
@@ -24,18 +25,52 @@ class ViewController: UIViewController,FilterViewControllerDelegate {
     }
     
   @IBOutlet weak var tableView: UITableView!
-  var coreDataStack: CoreDataStack!
+    
+    var coreDataStack: CoreDataStack!
+    
     //定义fetchRequest
     var fetchRequest:NSFetchRequest!
-    var venues:[Venue]!
-  
+    var venues:[Venue]! = []
+    var asyncFetchRequest:NSAsynchronousFetchRequest!
+    
   override func viewDidLoad() {
     super.viewDidLoad()
-    //模版查询
+    
+    let batchUpdate = NSBatchUpdateRequest(entityName: "Venue")
+    batchUpdate.propertiesToUpdate = ["favorite" : NSNumber(bool: true)]
+    batchUpdate.affectedStores = coreDataStack.psc.persistentStores
+    batchUpdate.resultType = NSBatchUpdateRequestResultType.UpdatedObjectsCountResultType
+    
+    var batchError:NSError?
+    let batchResult = coreDataStack.context.executeRequest(batchUpdate, error: &batchError) as! NSBatchUpdateResult?
+    if let result = batchResult{
+        println("Records update \(result.result)")
+    }else{
+        println("Could not update \(batchError),\(batchError!.userInfo)")
+    }
+    
+    //1 模版查询
 //    fetchRequest = coreDataStack.model.fetchRequestTemplateForName("FetchRequest")
     fetchRequest = NSFetchRequest(entityName: "Venue")
+    
+    //2
+    asyncFetchRequest = NSAsynchronousFetchRequest(fetchRequest: fetchRequest, completionBlock: { [unowned self](result:NSAsynchronousFetchResult!) -> Void in
+        self.venues = result.finalResult as! [Venue]
+        self.tableView.reloadData()
+    })
+    
+    //3
+    var error:NSError?
+    let results = coreDataStack.context.executeRequest(asyncFetchRequest, error: &error)
+//    let results = coreDataStack.context.executeFetchRequest(asyncFetchRequest, error: &error)
+    if let persistentStoreResults = results{
+        // Returns immediately,cancel here if you want
+    }else{
+         println("Cloud not fetch \(error),\(error!.userInfo)")
+    }
     fetchAndReload()
   }
+    
   
     func fetchAndReload(){
         var error:NSError?
