@@ -7,6 +7,9 @@
 //
 
 import UIKit
+import CoreData
+
+var fetchedResultsController:NSFetchedResultsController!
 
 class ViewController: UIViewController {
   
@@ -19,18 +22,28 @@ class ViewController: UIViewController {
     super.viewDidLoad()
     // Do any additional setup after loading the view, typically from a nib.
     
-  }
+    //1
+    let fetchRequest = NSFetchRequest(entityName: "Team")
+    //2
+    fetchedResultsController = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: coreDataStack.context, sectionNameKeyPath: nil, cacheName: nil)
+    //3
+    var error: NSError? = nil
+    if (!fetchedResultsController.performFetch(&error)){
+        println("Error: \(error?.localizedDescription)")
+    }
+}
   
   func numberOfSectionsInTableView
     (tableView: UITableView) -> Int {
       
-      return 1
+      return fetchedResultsController.sections!.count
   }
   
   func tableView(tableView: UITableView,
     numberOfRowsInSection section: Int) -> Int {
       
-      return 20
+        let sectionInfo = fetchedResultsController.sections![section] as! NSFetchedResultsSectionInfo
+      return sectionInfo.numberOfObjects
   }
 
   func tableView(tableView: UITableView,
@@ -50,6 +63,9 @@ class ViewController: UIViewController {
   }
   
   func configureCell(cell: TeamCell, indexPath: NSIndexPath) {
+     let team = fetchedResultsController.objectAtIndexPath(indexPath) as! Team
+    
+    cell.flagImageView.image = UIImage(named: team.imageName)
     cell.flagImageView.backgroundColor = UIColor.blueColor()
     cell.teamLabel.text = "Team Name"
     cell.scoreLabel.text = "Wins: 0"
